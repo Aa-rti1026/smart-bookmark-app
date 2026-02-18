@@ -1,7 +1,6 @@
 "use client";
-export const dynamic = "force-dynamic";
-import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import BookmarkList from "@/components/BookmarkList";
