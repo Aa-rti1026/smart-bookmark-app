@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react"; // Added Suspense
 import { supabase } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import BookmarkList from "@/components/BookmarkList";
@@ -14,8 +14,8 @@ interface Bookmark {
   created_at: string;
 }
 
-export default function Dashboard() {
-
+// 1. Move your main logic into a sub-component
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
@@ -23,7 +23,6 @@ export default function Dashboard() {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
 
-  // ✅ Fetch Bookmarks
   const fetchBookmarks = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("bookmarks")
@@ -34,9 +33,7 @@ export default function Dashboard() {
     setBookmarks(data || []);
   }, []);
 
-  // ✅ Realtime Sync
   const subscribeRealtime = useCallback((userId: string) => {
-
     supabase
       .channel("bookmarks-realtime")
       .on(
@@ -52,9 +49,7 @@ export default function Dashboard() {
       .subscribe();
   }, [fetchBookmarks]);
 
-  // ✅ Get Session
   useEffect(() => {
-
     const getSession = async () => {
       const { data, error } = await supabase.auth.getSession();
 
@@ -69,10 +64,8 @@ export default function Dashboard() {
     };
 
     getSession();
-
   }, [router, subscribeRealtime, fetchBookmarks]);
 
-  // ✅ Check for OAuth errors
   useEffect(() => {
     const error = searchParams.get('error');
     if (error) {
@@ -82,7 +75,6 @@ export default function Dashboard() {
     }
   }, [searchParams, router]);
 
-  // ✅ Add Bookmark
   const addBookmark = async () => {
     if (!url || !title || !user) return;
 
@@ -103,17 +95,14 @@ export default function Dashboard() {
     }
   };
 
-  // ✅ Delete Bookmark
   const deleteBookmark = async (id: string) => {
     const { error } = await supabase.from("bookmarks").delete().eq("id", id);
-
     if (error) {
       alert("Failed to delete bookmark");
       console.error(error);
     }
   };
 
-  // ✅ Logout
   const logout = async () => {
     await supabase.auth.signOut();
     router.push("/login");
@@ -123,37 +112,33 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: 40 }}>
-
       <h2>Dashboard</h2>
-
       <button onClick={logout}>Logout</button>
-
       <hr />
-
       <h3>Add Bookmark</h3>
-
       <input
         placeholder="Title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
-
       <input
         placeholder="URL"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
       />
-
-      <button onClick={addBookmark}>
-        Add
-      </button>
-
+      <button onClick={addBookmark}>Add</button>
       <hr />
-
       <h3>Your Bookmarks</h3>
-
       <BookmarkList bookmarks={bookmarks} onDelete={deleteBookmark} />
-
     </div>
+  );
+}
+
+// 2. Export the component wrapped in Suspense
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div>Loading Dashboard...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
